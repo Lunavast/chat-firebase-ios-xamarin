@@ -146,6 +146,9 @@
     <Compile Include="Model\Message.cs" />
     <Compile Include="Model\MessageType.cs" />
     <Compile Include="ChatSource.cs" />
+    <Compile Include="Model\Author.cs" />
+    <Compile Include="Cells\InAuthor.cs" />
+    <Compile Include="Cells\OutAuthor.cs" />
     <Compile Include="Cells\AuthorCell.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Xamarin\iOS\Xamarin.iOS.CSharp.targets" />

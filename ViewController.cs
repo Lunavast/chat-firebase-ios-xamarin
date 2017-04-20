@@ -17,7 +17,7 @@ namespace Chat
 		NSObject willShowToken;
 		NSObject willHideToken;
 
-		List<Message> messages;
+		List<Object> messages;
 		ChatSource chatSource;
 
 		UITableView tableView;
@@ -35,6 +35,8 @@ namespace Chat
 		ChildQuery chatChild;
 		IDisposable chatEventListener;
 
+		private string bAuthor = null;
+			
 		void initFirebase()
 		{
 			this.client = new FirebaseClient(this.basePath,
@@ -54,22 +56,39 @@ namespace Chat
 
 		void showChat(InboundMessage mess)
 		{
-			Console.WriteLine(mess.Content);
-
 			var text = mess.Content;
+			var author = mess.Author;
 
-			var msg = new Message
+			if (bAuthor != mess.Author)
+			{
+				bAuthor = mess.Author;
+				messages.Add(new Author
+				{
+					Type = mess.Author == this.name ? MessageType.Outgoing : MessageType.Incoming,
+					Text = author
+				});
+
+				InvokeOnMainThread(() =>
+				{
+					tableView.InsertRows(new NSIndexPath[] {
+				NSIndexPath.FromRowSection(messages.Count - 1, 0) }, UITableViewRowAnimation.None);
+
+					ScrollToBottom(true);
+				});
+
+			}
+
+			messages.Add(new Message
 			{
 				Type = mess.Author == this.name ? MessageType.Outgoing : MessageType.Incoming,
 				Text = text
-			};
+			});
 
-			messages.Add(msg);
-
-			InvokeOnMainThread(() => { 
-				tableView.InsertRows(new NSIndexPath[] { 
+			InvokeOnMainThread(() =>
+			{
+				tableView.InsertRows(new NSIndexPath[] {
 					NSIndexPath.FromRowSection(messages.Count - 1, 0) }, UITableViewRowAnimation.None);
-                ScrollToBottom(true);
+				ScrollToBottom(true);
 			});
 		}
 
@@ -101,7 +120,7 @@ namespace Chat
 
 		protected ViewController(IntPtr handle) : base(handle)
 		{
-			messages = new List<Message>();
+			messages = new List<Object>();
 		}
 
 		public override void ViewDidLoad()
@@ -153,6 +172,8 @@ namespace Chat
 			};
 			tableView.RegisterClassForCellReuse(typeof(IncomingCell), IncomingCell.CellId);
 			tableView.RegisterClassForCellReuse(typeof(OutgoingCell), OutgoingCell.CellId);
+			tableView.RegisterClassForCellReuse(typeof(InAuthor), InAuthor.CellId);
+			tableView.RegisterClassForCellReuse(typeof(OutAuthor), OutAuthor.CellId);
 			View.AddSubview(tableView);
 
 			var pinLeft = NSLayoutConstraint.Create(tableView, NSLayoutAttribute.Leading, NSLayoutRelation.Equal, View, NSLayoutAttribute.Leading, 1f, 0f);
