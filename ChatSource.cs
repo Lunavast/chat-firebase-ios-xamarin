@@ -6,70 +6,70 @@ using UIKit;
 
 namespace Chat
 {
-public class ChatSource : UITableViewSource
-{
-	static readonly NSString IncomingCellId = new NSString("Incoming");
-	static readonly NSString OutgoingCellId = new NSString("Outgoing");
-
-	IList<Message> messages;
-
-	readonly BubbleCell[] sizingCells;
-
-	public ChatSource(IList<Message> messages)
+	public class ChatSource : UITableViewSource
 	{
-		if (messages == null)
-			throw new ArgumentNullException(nameof(messages));
+		static readonly NSString IncomingCellId = new NSString("Incoming");
+		static readonly NSString OutgoingCellId = new NSString("Outgoing");
 
-		this.messages = messages;
-		sizingCells = new BubbleCell[2];
-	}
+		IList<Message> messages;
 
-	public override nint RowsInSection(UITableView tableview, nint section)
-	{
-		return messages.Count;
-	}
+		readonly BubbleCell[] sizingCells;
 
-	public override UITableViewCell GetCell(UITableView tableView, NSIndexPath indexPath)
-	{
-		BubbleCell cell = null;
-		Message msg = messages[indexPath.Row];
+		public ChatSource(IList<Message> messages)
+		{
+			if (messages == null)
+				throw new ArgumentNullException(nameof(messages));
 
-		cell = (BubbleCell)tableView.DequeueReusableCell(GetReuseId(msg.Type));
-		cell.Message = msg;
+			this.messages = messages;
+			sizingCells = new BubbleCell[2];
+		}
 
-		return cell;
-	}
+		public override nint RowsInSection(UITableView tableview, nint section)
+		{
+			return messages.Count;
+		}
 
-	public override nfloat GetHeightForRow(UITableView tableView, NSIndexPath indexPath)
-	{
-		Message msg = messages[indexPath.Row];
-		return CalculateHeightFor(msg, tableView);
-	}
+		public override UITableViewCell GetCell(UITableView tableView, NSIndexPath indexPath)
+		{
+			BubbleCell cell = null;
+			Message msg = messages[indexPath.Row];
 
-	public override nfloat EstimatedHeight(UITableView tableView, NSIndexPath indexPath)
-	{
-		Message msg = messages[indexPath.Row];
-		return CalculateHeightFor(msg, tableView);
-	}
+			cell = (BubbleCell)tableView.DequeueReusableCell(GetReuseId(msg.Type));
+			cell.Message = msg;
 
-	nfloat CalculateHeightFor(Message msg, UITableView tableView)
-	{
-		var index = (int)msg.Type;
-		BubbleCell cell = sizingCells[index];
-		if (cell == null)
-			cell = sizingCells[index] = (BubbleCell)tableView.DequeueReusableCell(GetReuseId(msg.Type));
+			return cell;
+		}
 
-		cell.Message = msg;
+		public override nfloat GetHeightForRow(UITableView tableView, NSIndexPath indexPath)
+		{
+			Message msg = messages[indexPath.Row];
+			return CalculateHeightFor(msg, tableView);
+		}
 
-		cell.SetNeedsLayout();
-		cell.LayoutIfNeeded();
-		CGSize size = cell.ContentView.SystemLayoutSizeFittingSize(UIView.UILayoutFittingCompressedSize);
-		return NMath.Ceiling(size.Height) + 1;
-	}
+		public override nfloat EstimatedHeight(UITableView tableView, NSIndexPath indexPath)
+		{
+			Message msg = messages[indexPath.Row];
+			return CalculateHeightFor(msg, tableView);
+		}
 
-	NSString GetReuseId(MessageType msgType)
-	{
-		return msgType == MessageType.Incoming ? IncomingCellId : OutgoingCellId;
+		nfloat CalculateHeightFor(Message msg, UITableView tableView)
+		{
+			var index = (int)msg.Type;
+			BubbleCell cell = sizingCells[index];
+			if (cell == null)
+				cell = sizingCells[index] = (BubbleCell)tableView.DequeueReusableCell(GetReuseId(msg.Type));
+
+			cell.Message = msg;
+
+			cell.SetNeedsLayout();
+			cell.LayoutIfNeeded();
+			CGSize size = cell.ContentView.SystemLayoutSizeFittingSize(UIView.UILayoutFittingCompressedSize);
+			return NMath.Ceiling(size.Height) + 1;
+		}
+
+		NSString GetReuseId(MessageType msgType)
+		{
+			return msgType == MessageType.Incoming ? IncomingCellId : OutgoingCellId;
 		}
 	}
 }

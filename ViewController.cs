@@ -1,6 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using CoreGraphics;
+using Firebase.Database;
+using Firebase.Database.Query;
+using System.Reactive.Linq;
+
 using Foundation;
 using UIKit;
 
@@ -8,6 +13,7 @@ namespace Chat
 {
 	public partial class ViewController : UIViewController
 	{
+		static string KEYCHATCHILD = "messages";
 		NSObject willShowToken;
 		NSObject willHideToken;
 
@@ -21,6 +27,53 @@ namespace Chat
 		NSLayoutConstraint toolbarHeightConstraint;
 
 		ChatInputView chatInputView;
+
+		String name = "cuong";
+		String authSecret = "RxIsctLdNZeV110WJ6PP0QtOPIwj9R1Fm5Tn9N3G";
+		String basePath = "https://chat-c642c.firebaseio.com/";
+		FirebaseClient client;
+		ChildQuery chatChild;
+		IDisposable chatEventListener;
+
+		void initFirebase()
+		{
+			this.client = new FirebaseClient(this.basePath,
+				new FirebaseOptions
+				{
+					AuthTokenAsyncFactory = () => Task.FromResult(this.authSecret)
+				});
+			this.chatChild = this.client.Child(KEYCHATCHILD);
+
+			var observable = this.chatChild.AsObservable<InboundMessage>();
+
+			this.chatEventListener = observable
+				.Where(f => !string.IsNullOrEmpty(f.Key)) // you get empty Key when there are no data on the server for specified node
+				.Subscribe(f => this.showChat(f.Object));
+
+		}
+
+		void showChat(InboundMessage mess)
+		{
+			Console.WriteLine(mess.Content);
+
+			var text = mess.Content;
+
+			var msg = new Message
+			{
+				Type = mess.Author == this.name ? MessageType.Outgoing : MessageType.Incoming,
+				Text = text
+			};
+
+			messages.Add(msg);
+
+			InvokeOnMainThread(() => { 
+				tableView.InsertRows(new NSIndexPath[] { 
+					NSIndexPath.FromRowSection(messages.Count - 1, 0) }, UITableViewRowAnimation.None);
+                ScrollToBottom(true);
+			});
+		}
+
+
 
 		UIButton SendButton
 		{
@@ -48,17 +101,7 @@ namespace Chat
 
 		protected ViewController(IntPtr handle) : base(handle)
 		{
-			messages = new List<Message> {
-				new Message { Type = MessageType.Incoming, Text = "Hello!" },
-				new Message { Type = MessageType.Outgoing, Text = "Hi!" },
-				new Message { Type = MessageType.Incoming, Text = "Do you know about Xamarin?" },
-				new Message { Type = MessageType.Outgoing, Text = "Yes! Sure!" },
-				new Message { Type = MessageType.Incoming, Text = "And what do you think?" },
-				new Message { Type = MessageType.Outgoing, Text = "I think it is the best way to develop mobile applications." },
-				new Message { Type = MessageType.Incoming, Text = "Wow :-)" },
-				new Message { Type = MessageType.Outgoing, Text = "Yep. Check it out\nhttp://Xamarin.com" },
-				new Message { Type = MessageType.Incoming, Text = "Will do. Thanks" }
-			};
+			messages = new List<Message>();
 		}
 
 		public override void ViewDidLoad()
@@ -71,6 +114,8 @@ namespace Chat
 			SendButton.TouchUpInside += OnSendClicked;
 			TextView.Started += OnTextViewStarted;
 			TextView.Changed += OnTextChanged;
+
+			initFirebase();
 		}
 
 
@@ -165,7 +210,7 @@ namespace Chat
 			toolbar.AddConstraints(c2);
 		}
 
-	
+
 
 		void AddObservers()
 		{
@@ -263,7 +308,7 @@ namespace Chat
 			return (UIViewAnimationOptions)((int)curve << 16);
 		}
 
-		void OnSendClicked(object sender, EventArgs e)
+		async void OnSendClicked(object sender, EventArgs e)
 		{
 			var text = TextView.Text;
 			TextView.Text = string.Empty; // this will not generate change text event
@@ -272,15 +317,7 @@ namespace Chat
 			if (string.IsNullOrWhiteSpace(text))
 				return;
 
-			var msg = new Message
-			{
-				Type = MessageType.Outgoing,
-				Text = text.Trim()
-			};
-
-			messages.Add(msg);
-			tableView.InsertRows(new NSIndexPath[] { NSIndexPath.FromRowSection(messages.Count - 1, 0) }, UITableViewRowAnimation.None);
-			ScrollToBottom(true);
+			await this.chatChild.PostAsync(new OutboundMessage { Author = name, Content = text });
 		}
 
 		void OnTextViewStarted(object sender, EventArgs e)
